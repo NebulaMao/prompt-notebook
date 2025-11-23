@@ -46,6 +46,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const savedTheme = (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system';
     setTheme(savedTheme);
@@ -72,6 +74,7 @@ export default function Home() {
     // Fetch prompts from Supabase
     async function fetchPrompts() {
       setLoading(true);
+      setError(null);
 
       // Check if Supabase is configured
       if (!isSupabaseConfigured()) {
@@ -88,8 +91,8 @@ export default function Home() {
 
       if (error) {
         console.error('Error fetching prompts:', error);
-        // Fallback to mock data on error
-        setPrompts(mockPrompts);
+        setError('Network error: Unable to connect to backend');
+        setPrompts([]);
       } else {
         setPrompts(data || []);
       }
@@ -236,6 +239,14 @@ export default function Home() {
           <div className="text-center py-20">
             <span className="loading loading-spinner loading-lg text-primary"></span>
           </div>
+        ) : error ? (
+          <div className="text-center py-20">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-error/10 mb-4">
+              <X className="w-8 h-8 text-error" />
+            </div>
+            <h3 className="text-xl font-semibold text-base-content mb-2">{error}</h3>
+            <p className="text-base-content/60">Please try again later.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPrompts.map((prompt) => (
@@ -308,7 +319,7 @@ export default function Home() {
         )}
 
         {
-          filteredPrompts.length === 0 && (
+          !error && filteredPrompts.length === 0 && (
             <div className="text-center py-20">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-base-300 mb-4">
                 <Search className="w-8 h-8 text-base-content/50" />
