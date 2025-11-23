@@ -25,12 +25,27 @@ export const links: Route.LinksFunction = () => [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="light">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const theme = localStorage.getItem('theme') || 'system';
+                if (theme === 'system') {
+                  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  document.documentElement.setAttribute('data-theme', systemTheme);
+                } else {
+                  document.documentElement.setAttribute('data-theme', theme);
+                }
+              })();
+            `,
+          }}
+        />
       </head>
       <body>
         {children}
