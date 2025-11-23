@@ -1,21 +1,11 @@
--- Create prompts table
-CREATE TABLE IF NOT EXISTS public.prompts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title TEXT NOT NULL,
-  description TEXT NOT NULL,
-  content TEXT NOT NULL,
-  tags TEXT[] DEFAULT '{}',
-  author TEXT NOT NULL,
-  likes INTEGER DEFAULT 0,
-  category TEXT CHECK (category IN ('Coding', 'Writing', 'Art', 'Productivity', 'Other')) DEFAULT 'Other',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE
-);
+-- ============================================================
+-- Migration: Change Prompts to Admin-Only Management
+-- Description: Only admin users can create/update/delete prompts
+--              All users can still read prompts
+-- Run this in Supabase SQL Editor to update your database
+-- ============================================================
 
--- Enable Row Level Security
-ALTER TABLE public.prompts ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies if they exist
+-- Drop all existing policies on prompts table
 DROP POLICY IF EXISTS "Anyone can read prompts" ON public.prompts;
 DROP POLICY IF EXISTS "Users can insert their own prompts" ON public.prompts;
 DROP POLICY IF EXISTS "Users can update their own prompts" ON public.prompts;
@@ -24,13 +14,13 @@ DROP POLICY IF EXISTS "Only admins can insert prompts" ON public.prompts;
 DROP POLICY IF EXISTS "Only admins can update prompts" ON public.prompts;
 DROP POLICY IF EXISTS "Only admins can delete prompts" ON public.prompts;
 
--- Policy: Anyone can read prompts
+-- Policy 1: Anyone can read prompts (public access)
 CREATE POLICY "Anyone can read prompts"
   ON public.prompts
   FOR SELECT
   USING (true);
 
--- Policy: Only admins can insert prompts
+-- Policy 2: Only admins can insert prompts
 CREATE POLICY "Only admins can insert prompts"
   ON public.prompts
   FOR INSERT
@@ -41,7 +31,7 @@ CREATE POLICY "Only admins can insert prompts"
     )
   );
 
--- Policy: Only admins can update prompts
+-- Policy 3: Only admins can update prompts
 CREATE POLICY "Only admins can update prompts"
   ON public.prompts
   FOR UPDATE
@@ -52,7 +42,7 @@ CREATE POLICY "Only admins can update prompts"
     )
   );
 
--- Policy: Only admins can delete prompts
+-- Policy 4: Only admins can delete prompts
 CREATE POLICY "Only admins can delete prompts"
   ON public.prompts
   FOR DELETE
@@ -63,7 +53,8 @@ CREATE POLICY "Only admins can delete prompts"
     )
   );
 
--- Create index for faster queries (will skip if already exists)
-CREATE INDEX IF NOT EXISTS prompts_user_id_idx ON public.prompts(user_id);
-CREATE INDEX IF NOT EXISTS prompts_category_idx ON public.prompts(category);
-CREATE INDEX IF NOT EXISTS prompts_created_at_idx ON public.prompts(created_at DESC);
+-- Display current policies (for verification)
+SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+FROM pg_policies
+WHERE tablename = 'prompts'
+ORDER BY policyname;
