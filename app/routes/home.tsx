@@ -195,18 +195,21 @@ export default function Home() {
             </p>
 
             {/* Search Bar */}
-            <div className="join w-full max-w-lg shadow-xl">
-              <div className="join-item flex items-center justify-center bg-base-100 px-4 border border-base-content/20 border-r-0">
-                <Search className="w-5 h-5 text-base-content/50" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search prompts..."
-                className="input input-bordered join-item w-full focus:outline-none border-l-0 pl-0"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+            <label className="input w-full shadow-xl">
+              <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <g
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  strokeWidth="2.5"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.3-4.3"></path>
+                </g>
+              </svg>
+              <input type="search" required placeholder="Search" onChange={(e) => setSearchQuery(e.target.value)} />
+            </label>
           </div>
         </div>
       </div>
