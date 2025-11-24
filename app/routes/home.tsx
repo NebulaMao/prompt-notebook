@@ -31,6 +31,13 @@ export function meta({ }: Route.MetaArgs) {
   return [
     { title: "Prompt Notebook | Discover & Share AI Prompts" },
     { name: "description", content: "A curated collection of high-quality AI prompts for coding, writing, art, and more." },
+    { name: "keywords", content: "AI prompts, ChatGPT prompts, Midjourney prompts, coding prompts, writing prompts, creative writing, productivity, art prompts" },
+    { property: "og:title", content: "Prompt Notebook | Discover & Share AI Prompts" },
+    { property: "og:description", content: "A curated collection of high-quality AI prompts for coding, writing, art, and more." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: "Prompt Notebook | Discover & Share AI Prompts" },
+    { name: "twitter:description", content: "A curated collection of high-quality AI prompts for coding, writing, art, and more." },
   ];
 }
 
@@ -45,6 +52,7 @@ export default function Home() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [likedPrompts, setLikedPrompts] = useState<Set<string>>(new Set());
 
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +77,13 @@ export default function Home() {
       document.documentElement.setAttribute('data-theme', theme);
     }
   }, [theme]);
+
+  useEffect(() => {
+    const liked = localStorage.getItem('likedPrompts');
+    if (liked) {
+      setLikedPrompts(new Set(JSON.parse(liked)));
+    }
+  }, []);
 
   useEffect(() => {
     // Fetch prompts from Supabase
@@ -132,8 +147,64 @@ export default function Home() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleLike = async (e: React.MouseEvent, prompt: Prompt) => {
+    e.stopPropagation();
+
+    if (likedPrompts.has(prompt.id)) {
+      return; // Already liked
+    }
+
+    // Optimistic update
+    setPrompts(prompts.map(p =>
+      p.id === prompt.id ? { ...p, likes: p.likes + 1 } : p
+    ));
+    if (selectedPrompt?.id === prompt.id) {
+      setSelectedPrompt({ ...selectedPrompt, likes: selectedPrompt.likes + 1 });
+    }
+
+    // Update local storage
+    const newLikedPrompts = new Set(likedPrompts);
+    newLikedPrompts.add(prompt.id);
+    setLikedPrompts(newLikedPrompts);
+    localStorage.setItem('likedPrompts', JSON.stringify(Array.from(newLikedPrompts)));
+
+    // Call Supabase RPC
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase.rpc('increment_likes', { p_id: prompt.id });
+      if (error) {
+        console.error('Error incrementing likes:', error);
+        // Revert optimistic update on error
+        setPrompts(prompts.map(p =>
+          p.id === prompt.id ? { ...p, likes: p.likes - 1 } : p
+        ));
+         if (selectedPrompt?.id === prompt.id) {
+            setSelectedPrompt({ ...selectedPrompt, likes: selectedPrompt.likes - 1 });
+        }
+        newLikedPrompts.delete(prompt.id);
+        setLikedPrompts(newLikedPrompts);
+        localStorage.setItem('likedPrompts', JSON.stringify(Array.from(newLikedPrompts)));
+      }
+    }
+  };
+
+  const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Prompt Notebook",
+    "applicationCategory": "Productivity",
+    "description": "A curated collection of high-quality AI prompts for coding, writing, art, and more.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0"
+    }
+  };
+
   return (
     <div className="min-h-screen bg-base-200 font-sans">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+      />
       {/* Navbar */}
       <nav className="sticky top-0 z-50 border-b border-base-content/10 bg-base-100/80 backdrop-blur-md">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -267,10 +338,16 @@ export default function Home() {
                       })()}
                       {prompt.category}
                     </div>
-                    <div className="flex items-center gap-1 text-base-content/60 text-xs">
-                      <Heart className="w-3 h-3" />
+                    <button
+                      onClick={(e) => handleLike(e, prompt)}
+                      className={cn(
+                        "flex items-center gap-1 text-xs transition-colors hover:scale-110 active:scale-95",
+                         likedPrompts.has(prompt.id) ? "text-error" : "text-base-content/60 hover:text-error"
+                      )}
+                    >
+                      <Heart className={cn("w-3 h-3", likedPrompts.has(prompt.id) && "fill-current")} />
                       {prompt.likes}
-                    </div>
+                    </button>
                   </div>
 
                   <h3 className="card-title text-base-content mb-2 group-hover:text-primary transition-colors">
@@ -355,10 +432,16 @@ export default function Home() {
                 })()}
                 {selectedPrompt.category}
               </div>
-              <div className="flex items-center gap-1 text-base-content/60 text-sm">
-                <Heart className="w-4 h-4" />
+              <button
+                onClick={(e) => handleLike(e, selectedPrompt)}
+                className={cn(
+                  "flex items-center gap-1 text-sm transition-colors hover:scale-110 active:scale-95",
+                  likedPrompts.has(selectedPrompt.id) ? "text-error" : "text-base-content/60 hover:text-error"
+                )}
+              >
+                <Heart className={cn("w-4 h-4", likedPrompts.has(selectedPrompt.id) && "fill-current")} />
                 {selectedPrompt.likes}
-              </div>
+              </button>
             </div>
 
             <h3 className="font-bold text-3xl mb-4">{selectedPrompt.title}</h3>
